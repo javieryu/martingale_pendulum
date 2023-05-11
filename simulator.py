@@ -4,6 +4,7 @@ from scipy.special import ellipk
 import matplotlib.animation as animation
 import multiprocessing as mp
 import itertools
+import torch
 import pdb
 
 """
@@ -36,6 +37,7 @@ def simulate_pendulum(x_init, config):
         state_traj[step, :] = pendulum_dynamics(state_traj[step - 1, :], dt, m, l, b, g)
         xy_traj[step, :] = get_xy(state_traj[step, 0], l)
 
+    state_traj[:, 0] = np.mod(state_traj[:, 0], 2 * np.pi)
     return state_traj, xy_traj
 
 
@@ -104,6 +106,27 @@ def generate_trajectories(
         trajs = [simulate_pendulum(init, sim_config) for init in state_inits]
 
     return zip(*trajs)
+
+
+def rad_to_cossin(trajectory):
+    return torch.cat(
+        (
+            torch.cos(trajectory[:, 0]).unsqueeze(1),
+            torch.sin(trajectory[:, 0]).unsqueeze(1),
+            trajectory[:, 1:],
+        ),
+        dim=1,
+    )
+
+
+def cossin_to_rad(trajectory):
+    return torch.cat(
+        (
+            torch.atan2(trajectory[:, 1], trajectory[:, 0]).unsqueeze(1),
+            trajectory[:, 1:],
+        ),
+        dim=1,
+    )
 
 
 def get_xy(theta, l):
