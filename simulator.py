@@ -8,7 +8,7 @@ Simulator related code goes in here.
 """
 
 
-def simulate_pendulum(x_init, T, dt, config):
+def simulate_pendulum(x_init, config):
     """
     Takes initial conditions and rolls out the dynamics for a fixed time frame.
     x_init: state at t = 0, [theta (radians), theta_dot (radians / s)]
@@ -20,6 +20,8 @@ def simulate_pendulum(x_init, T, dt, config):
     l = config["l"]
     b = config["b"]
     g = config["g"]
+    T = config["T"]
+    dt = config["dt"]
 
     n_steps = int(np.ceil(T / dt))
 
@@ -148,16 +150,13 @@ def animate_two_traj(xy_traj_1, xy_traj_2):
 if __name__ == "__main__":
     ### Script ###
     # specify model params and init condition
-    m, l, b, g = [0.5, 1, 0.3, 9.81]
-    dt = 0.05
-    T = 10
     x_init_1 = np.array([0.1, 0])  # slightly right of upright
     x_init_2 = np.array([np.pi / 2, 0])  # 90 deg right
-    config = {"m": m, "l": l, "b": b, "g": g}
+    config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
 
     # solve for trajectory
-    state_traj_1, xy_traj_1 = simulate_pendulum(x_init_1, T, dt, config)
-    state_traj_2, xy_traj_2 = simulate_pendulum(x_init_2, T, dt, config)
+    state_traj_1, xy_traj_1 = simulate_pendulum(x_init_1, config)
+    state_traj_2, xy_traj_2 = simulate_pendulum(x_init_2, config)
 
     fig = animate_two_traj(xy_traj_1, xy_traj_2)
     plt.show()
