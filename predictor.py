@@ -195,16 +195,14 @@ if __name__ == "__main__":
     valid_init_bounds = ([0.0, 0.0], [2 * np.pi, 0.0])
     num_train_trajs = 5000
     num_valid_trajs = 100
-    config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
-
+    config = {"m": 0.5, "l": 0.3, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
     model = train_predictor(train_init_bounds, num_train_trajs, config)
 
+    config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
     test_traj, test_xy = simulator.simulate_pendulum(np.array([0.2, 0]), config)
     test_inputs = simulator.rad_to_cossin(torch.from_numpy(test_traj[:-1]))
     test_preds = rollout_predictor(model, test_inputs)
     test_preds_xy = config["l"] * test_preds[:, :-1].flip(-1)
 
-    fig = simulator.animate_two_traj(test_xy, test_preds_xy)
+    fig = simulator.animate_two_traj(test_xy[1:], test_preds_xy)
     plt.show()
-
-
