@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import ellipk
 import matplotlib.animation as animation
+import multiprocessing as mp
+import itertools
+import pdb
 
 """
 Simulator related code goes in here.
@@ -58,6 +61,49 @@ def pendulum_dynamics(x, dt, m=1, l=1, b=1, g=9.81):
     k3 = pendulum_continuous(x + dt * 0.5 * k2, m, l, b, g)
     k4 = pendulum_continuous(x + dt * k3, m, l, b, g)
     return x + (dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+
+
+def generate_trajectories(
+    init_bounds,
+    sim_config,
+    num_trajectories,
+    init_dist="uniform",
+    use_mp=True,
+    workers=4,
+):
+    """
+    Generates num_trajectories number of pendulum trajectories
+    that are sampled from initial conditions with a specified
+    support and distribution.
+
+    init_bounds: state init bounds formatted as tuple(lows, highs) where
+        lows/highs are lists of length = state_dim.
+    sim_config: dictionary of configuration settings for simulator.
+    num_trajectories: int, number of trajectories to simulate.
+    init_dist: distribution over initial conditions.
+        Options are ["uniform", ]
+    use_mp: bool to use multiple threads to compute trajectories
+    workers: int number of threads to use in multiprocessing
+
+    Returns two lists of trajectories where each trajectory
+    is a numpy array [time, state_dim], and the first list is theta state and
+    the second list is xy state.
+    """
+
+    if init_dist == "uniform":
+        state_inits = [np.random.uniform(*init_bounds) for _ in range(num_trajectories)]
+    else:
+        raise NameError("simulator.py: Unknown initial state distribution type.")
+
+    if use_mp:
+        pool = mp.Pool(workers)
+        trajs = pool.starmap(
+            simulate_pendulum, zip(state_inits, itertools.repeat(sim_config))
+        )
+    else:
+        trajs = [simulate_pendulum(init, sim_config) for init in state_inits]
+
+    return zip(*trajs)
 
 
 def get_xy(theta, l):
