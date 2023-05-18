@@ -54,8 +54,11 @@ def training_dist_plot(model_path):
 
 def quiver_plots(forward_dynamics):
     # solve for "phase diagram"
-    thetas = np.linspace(-2*np.pi, 2*np.pi, num=50)
-    theta_dots = np.linspace(-2*np.pi, 2*np.pi, num=50)
+    # thetas = np.linspace(-2*np.pi, 2*np.pi, num=50)
+    # theta_dots = np.linspace(-2*np.pi, 2*np.pi, num=50)
+    
+    thetas = np.linspace(-np.pi, np.pi, num=15)
+    theta_dots = np.linspace(-np.pi, np.pi, num=15)
     Theta, Theta_dot = np.meshgrid(thetas, theta_dots)
     theta_dir = np.zeros(Theta.shape)
     theta_dot_dir = np.zeros(Theta.shape)
@@ -73,6 +76,10 @@ def quiver_plots(forward_dynamics):
     ax.quiver(Theta, Theta_dot, theta_dir, theta_dot_dir)
     plt.xlabel(r'$\theta$ (rad)', fontsize=15)
     plt.ylabel(r'$\dot{\theta}$ (rad/s)', fontsize=15)
+
+    # plt.savefig("figures/quiver_learned_OOD.svg")
+    # plt.savefig("figures/quiver_learned_OOD.png")
+
     plt.show()
 
 
@@ -84,6 +91,7 @@ if __name__ == "__main__":
     test_config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
     init_state = [-np.pi/6, 0]
     
+    # # Make animation testing NN on new environment
     # compute rollouts
     # test_traj, test_xy = simulator.simulate_pendulum(np.array(init_state), test_config)
     # test_inputs = simulator.rad_to_cossin(torch.from_numpy(test_traj[:-1]))
@@ -94,8 +102,10 @@ if __name__ == "__main__":
     # fig = simulator.animate_two_traj(test_xy[1:], test_preds_xy)
     # plt.show()
 
-
+    # # Make training distribution plot
     # training_dist_plot(filename)
+
+    # Make quiver plots
     true_dynamics = lambda state : simulator.pendulum_dynamics(state, 0.05, m=0.5, l=1, b=0.3, g=9.81)
     learned_dynamics = lambda state: train_model.single_input_pred(model, state)
     
