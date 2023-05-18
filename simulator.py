@@ -117,7 +117,7 @@ def rad_to_cossin(trajectory):
         ),
         dim=1,
     )
-
+    
 
 def cossin_to_rad(trajectory):
     return torch.cat(
@@ -164,9 +164,10 @@ def animate_single_traj(xy_traj):
     bob_radius = 0.08
     circle = ax.add_patch(plt.Circle(xy_traj[0, :], bob_radius, fc="red", zorder=3))
 
-    # Set the plot limits so that the pendulum has room to swing!
-    ax.set_xlim(-1.2, 1.2)
-    ax.set_ylim(-1.2, 1.2)
+    # Set the plot limits so that the pendulum has room to swing
+    l = np.sqrt(xy_traj[0, 0]**2 + xy_traj[0,1]**2) # lenth of pendulum
+    ax.set_xlim(-1.2*l, 1.2*l)
+    ax.set_ylim(-1.2*l, 1.2*l)
 
     nframes = xy_traj.shape[0]
     ani = animation.FuncAnimation(
@@ -194,13 +195,12 @@ def animate_two_traj(xy_traj_1, xy_traj_2):
     # The pendulum bob: set zorder so that it is drawn over the pendulum rod.
     bob_radius = 0.08
     circle_1 = ax.add_patch(plt.Circle(xy_traj_1[0, :], bob_radius, fc="red", zorder=3))
-    circle_2 = ax.add_patch(
-        plt.Circle(xy_traj_2[0, :], bob_radius, fc="red", zorder=3, alpha=0.5)
-    )
+    circle_2 = ax.add_patch(plt.Circle(xy_traj_2[0, :], bob_radius, fc="red", zorder=3, alpha=0.5))
 
-    # Set the plot limits so that the pendulum has room to swing!
-    ax.set_xlim(-1.2, 1.2)
-    ax.set_ylim(-1.2, 1.2)
+    # Set the plot limits so that the pendulum has room to swing
+    l = max(np.sqrt(xy_traj_1[0, 0]**2 + xy_traj_1[0,1]**2), np.sqrt(xy_traj_2[0, 0]**2 + xy_traj_2[0,1]**2))
+    ax.set_xlim(-1.2*l, 1.2*l)
+    ax.set_ylim(-1.2*l, 1.2*l)
 
     nframes = min(xy_traj_1.shape[0], xy_traj_2.shape[0])
     ani = animation.FuncAnimation(
@@ -216,12 +216,53 @@ def animate_two_traj(xy_traj_1, xy_traj_2):
     return fig
 
 
+def make_pendulum_figure(theta):
+    fig = plt.figure()
+    ax = fig.add_subplot(aspect="equal")
+
+    x_bob = np.sin(theta)
+    y_bob = np.cos(theta)
+    # The pendulum rod, in its initial position.
+    (line,) = ax.plot([0, x_bob], [0, y_bob], lw=3, c="black")
+
+    # The pendulum bob: set zorder so that it is drawn over the pendulum rod.
+    bob_radius = 0.08
+    circle = ax.add_patch(plt.Circle([x_bob, y_bob], bob_radius, fc="red", zorder=3))
+
+    # Set the plot limits so that the pendulum has room to swing
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-1.2, 1.2)
+
+    # add grid lines
+    plt.grid()
+
+    # add arc
+    arc_angles = np.linspace(0, theta, 20)
+    arc_xs = 0.7 * np.sin(arc_angles)
+    arc_ys = 0.7 * np.cos(arc_angles)
+    plt.plot(arc_xs, arc_ys, color = 'black', lw = 1)
+
+    # add arrow to arc
+    plt.arrow(arc_xs[-3], arc_ys[-3], 0.01, -0.005, color="black", width=0.001, head_width=0.02, head_length=0.02)
+
+    # add theta label
+    plt.text(0.17,0.75,r'$\theta$', fontsize=15)
+
+    plt.savefig("figures/pend_fig.svg")
+    plt.savefig("figures/pend_fig.png")
+
+
+
+
 if __name__ == "__main__":
     ### Script ###
     # specify model params and init condition
     x_init_1 = np.array([0.1, 0])  # slightly right of upright
     x_init_2 = np.array([np.pi / 2, 0])  # 90 deg right
     config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
+
+    # make and save pendulum figure
+    # make_pendulum_figure(np.pi/6)
 
     # solve for trajectory
     state_traj_1, xy_traj_1 = simulate_pendulum(x_init_1, config)

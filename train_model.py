@@ -9,6 +9,10 @@ from rich.status import Status
 import matplotlib.pyplot as plt
 import pdb
 import time
+import yaml
+from datetime import datetime
+import os
+import math
 
 # Local Imports
 import simulator
@@ -37,7 +41,7 @@ class PendulumNetwork(nn.Module):
 
         # Build up the layers
         layers = []
-        # (1, 64, 64, 1)
+        # (3, 64, 64, 64, 3)
         layers.append(nn.Linear(3, 64))
         layers.append(nn.ReLU(inplace=True))
         layers.append(nn.Linear(64, 64))
@@ -81,7 +85,7 @@ def train_model(train_data, valid_data, use_cuda=True):
     use_cuda: bool to use cuda for everything
     """
     BATCH_SIZE = 1024
-    NUM_EPOCHS = 4
+    NUM_EPOCHS = 3
     LR = 0.0001
 
     if torch.cuda.is_available() and use_cuda:
@@ -138,7 +142,6 @@ def train_model(train_data, valid_data, use_cuda=True):
 
 def train_predictor(
     train_init_bounds,
-    num_train_trajs,
     sim_config,
     num_valid_trajs=100,
     valid_init_bounds=None,
@@ -150,6 +153,7 @@ def train_predictor(
     sim_config: dictionary of configuration settings for simulator.
 
     """
+    num_train_trajs = sim_config["num_train_trajs"]
     # Generate Train Data
     status = f"Generating {num_train_trajs} train trajectories."
     with Status(status):
@@ -190,19 +194,39 @@ def rollout_predictor(model, inputs, output_device="cpu"):
     return outputs.to(torch.device(output_device))
 
 
+def single_input_pred(model, state):
+    state = np.array([[np.cos(state[0]), np.sin(state[0]), state[1]]])
+    state = torch.from_numpy(state)
+    pred = rollout_predictor(model, state).numpy()[0]
+    pred = [math.atan2(pred[1], pred[0]), pred[2]]
+    return pred
+
+
+def save_model(model, config):
+    # make folder for training run
+    current_datetime = datetime.now().strftime("%Y%m%d-%H%M%S")
+    filepath = "models/" + str(current_datetime)
+    os.mkdir(filepath)
+
+    # save network and config dict
+    torch.save(model.state_dict(), filepath + "/model")
+    with open(filepath + "/config.yaml", 'w') as file:
+        yaml.dump(config, file)
+
+
+def load_model(model_path):
+    model = PendulumNetwork().to("cpu").to(torch.double)
+    model.load_state_dict(torch.load(model_path, map_location='cpu'))
+    return model
+
+
+
 if __name__ == "__main__":
     train_init_bounds = ([0.0, 0.0], [np.pi / 2, 0.0])
-    valid_init_bounds = ([0.0, 0.0], [2 * np.pi, 0.0])
     num_train_trajs = 5000
     num_valid_trajs = 100
-    config = {"m": 0.5, "l": 0.3, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
-    model = train_predictor(train_init_bounds, num_train_trajs, config)
-
-    config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
-    test_traj, test_xy = simulator.simulate_pendulum(np.array([0.2, 0]), config)
-    test_inputs = simulator.rad_to_cossin(torch.from_numpy(test_traj[:-1]))
-    test_preds = rollout_predictor(model, test_inputs)
-    test_preds_xy = config["l"] * test_preds[:, :-1].flip(-1)
-
-    fig = simulator.animate_two_traj(test_xy[1:], test_preds_xy)
-    plt.show()
+    train_config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0,
+              "num_train_trajs": num_train_trajs, "num_valid_trajs": num_valid_trajs,
+              "train_init_bounds": train_init_bounds}
+    model = train_predictor(train_init_bounds, train_config)
+    save_model(model, train_config)
