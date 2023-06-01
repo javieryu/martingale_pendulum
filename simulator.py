@@ -12,6 +12,10 @@ Simulator related code goes in here.
 """
 
 
+def generate_linear_mix_lambda(param):
+    return lambda r: (1.0 - r) * param[0] + r * param[1]
+
+
 def simulate_pendulum(x_init, config):
     """
     Takes initial conditions and rolls out the dynamics for a fixed time frame.
@@ -20,25 +24,31 @@ def simulate_pendulum(x_init, config):
     dt: discrete time-steps to simulate
     config: contains dynamics model parameters
     """
-    m = config["m"]
-    l = config["l"]
-    b = config["b"]
-    g = config["g"]
+    m = generate_linear_mix_lambda(config["m"])
+    l = generate_linear_mix_lambda(config["l"])
+    b = generate_linear_mix_lambda(config["b"])
+    g = generate_linear_mix_lambda(config["g"])
     T = config["T"]
     dt = config["dt"]
 
     n_steps = int(np.ceil(T / dt))
 
     state_traj = np.zeros((n_steps, 2))
+    param_traj = np.zeros((n_steps, 4))
     xy_traj = np.zeros_like(state_traj)
     state_traj[0, :] = x_init
-    xy_traj[0, :] = get_xy(state_traj[0, 0], l)
+    param_traj[0, :] = np.array([m(0), l(0), b(0), g(0)])
+    xy_traj[0, :] = get_xy(state_traj[0, 0], l(0))
     for step in range(1, n_steps):
-        state_traj[step, :] = pendulum_dynamics(state_traj[step - 1, :], dt, m, l, b, g)
-        xy_traj[step, :] = get_xy(state_traj[step, 0], l)
+        r = step / n_steps
+        state_traj[step, :] = pendulum_dynamics(
+            state_traj[step - 1, :], dt, m(r), l(r), b(r), g(r)
+        )
+        xy_traj[step, :] = get_xy(state_traj[step, 0], l(r))
+        param_traj[step, :] = np.array([m(r), l(r), b(r), g(r)])
 
     state_traj[:, 0] = np.mod(state_traj[:, 0], 2 * np.pi)
-    return state_traj, xy_traj
+    return [state_traj, xy_traj, param_traj]
 
 
 def pendulum_continuous(x, m, l, b, g):
@@ -48,12 +58,12 @@ def pendulum_continuous(x, m, l, b, g):
     x = [0, 0] is upright; positive theta is clockwise.
     """
     theta, theta_dot = x
-    theta_ddot = (m * g * l * np.sin(theta) - b * theta_dot) / (m * l**2)
+    theta_ddot = (m * g * l * np.sin(theta) - b * theta_dot) / (m * l ** 2)
 
     return np.array([theta_dot, theta_ddot])
 
 
-def pendulum_dynamics(x, dt, m=1, l=1, b=1, g=9.81):
+def pendulum_dynamics(x, dt, m=1.0, l=1.0, b=1.0, g=9.81):
     """
     Describes the discrete-time dynamics of an unforced, damped pendulum.
     Integrates the continuous-time dynamics using RK4.
@@ -117,7 +127,7 @@ def rad_to_cossin(trajectory):
         ),
         dim=1,
     )
-    
+
 
 def cossin_to_rad(trajectory):
     return torch.cat(
@@ -165,9 +175,9 @@ def animate_single_traj(xy_traj):
     circle = ax.add_patch(plt.Circle(xy_traj[0, :], bob_radius, fc="red", zorder=3))
 
     # Set the plot limits so that the pendulum has room to swing
-    l = np.sqrt(xy_traj[0, 0]**2 + xy_traj[0,1]**2) # lenth of pendulum
-    ax.set_xlim(-1.2*l, 1.2*l)
-    ax.set_ylim(-1.2*l, 1.2*l)
+    l = np.sqrt(xy_traj[0, 0] ** 2 + xy_traj[0, 1] ** 2)  # lenth of pendulum
+    ax.set_xlim(-1.2 * l, 1.2 * l)
+    ax.set_ylim(-1.2 * l, 1.2 * l)
 
     nframes = xy_traj.shape[0]
     ani = animation.FuncAnimation(
@@ -195,12 +205,17 @@ def animate_two_traj(xy_traj_1, xy_traj_2):
     # The pendulum bob: set zorder so that it is drawn over the pendulum rod.
     bob_radius = 0.08
     circle_1 = ax.add_patch(plt.Circle(xy_traj_1[0, :], bob_radius, fc="red", zorder=3))
-    circle_2 = ax.add_patch(plt.Circle(xy_traj_2[0, :], bob_radius, fc="red", zorder=3, alpha=0.5))
+    circle_2 = ax.add_patch(
+        plt.Circle(xy_traj_2[0, :], bob_radius, fc="red", zorder=3, alpha=0.5)
+    )
 
     # Set the plot limits so that the pendulum has room to swing
-    l = max(np.sqrt(xy_traj_1[0, 0]**2 + xy_traj_1[0,1]**2), np.sqrt(xy_traj_2[0, 0]**2 + xy_traj_2[0,1]**2))
-    ax.set_xlim(-1.2*l, 1.2*l)
-    ax.set_ylim(-1.2*l, 1.2*l)
+    l = max(
+        np.sqrt(xy_traj_1[0, 0] ** 2 + xy_traj_1[0, 1] ** 2),
+        np.sqrt(xy_traj_2[0, 0] ** 2 + xy_traj_2[0, 1] ** 2),
+    )
+    ax.set_xlim(-1.2 * l, 1.2 * l)
+    ax.set_ylim(-1.2 * l, 1.2 * l)
 
     nframes = min(xy_traj_1.shape[0], xy_traj_2.shape[0])
     ani = animation.FuncAnimation(
@@ -240,33 +255,55 @@ def make_pendulum_figure(theta):
     arc_angles = np.linspace(0, theta, 20)
     arc_xs = 0.7 * np.sin(arc_angles)
     arc_ys = 0.7 * np.cos(arc_angles)
-    plt.plot(arc_xs, arc_ys, color = 'black', lw = 1)
+    plt.plot(arc_xs, arc_ys, color="black", lw=1)
 
     # add arrow to arc
-    plt.arrow(arc_xs[-3], arc_ys[-3], 0.01, -0.005, color="black", width=0.001, head_width=0.02, head_length=0.02)
+    plt.arrow(
+        arc_xs[-3],
+        arc_ys[-3],
+        0.01,
+        -0.005,
+        color="black",
+        width=0.001,
+        head_width=0.02,
+        head_length=0.02,
+    )
 
     # add theta label
-    plt.text(0.17,0.75,r'$\theta$', fontsize=15)
+    plt.text(0.17, 0.75, r"$\theta$", fontsize=15)
 
     plt.savefig("figures/pend_fig.svg")
     plt.savefig("figures/pend_fig.png")
-
-
 
 
 if __name__ == "__main__":
     ### Script ###
     # specify model params and init condition
     x_init_1 = np.array([0.1, 0])  # slightly right of upright
-    x_init_2 = np.array([np.pi / 2, 0])  # 90 deg right
-    config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
+    x_init_2 = np.array([3.9 * np.pi / 2, 0])  # 90 deg right
+    config1 = {
+        "m": [0.5, 0.5],
+        "l": [1.0, 1.0],
+        "b": [0.3, 0.3],
+        "g": [9.81, 9.81],
+        "dt": 0.05,
+        "T": 10.0,
+    }
+    config2 = {
+        "m": [0.5, 0.5],
+        "l": [1.0, 0.5],
+        "b": [0.3, 0.3],
+        "g": [9.81, 9.81],
+        "dt": 0.05,
+        "T": 10.0,
+    }
 
     # make and save pendulum figure
     # make_pendulum_figure(np.pi/6)
 
     # solve for trajectory
-    state_traj_1, xy_traj_1 = simulate_pendulum(x_init_1, config)
-    state_traj_2, xy_traj_2 = simulate_pendulum(x_init_2, config)
+    state_traj_1, xy_traj_1, _ = simulate_pendulum(x_init_1, config1)
+    state_traj_2, xy_traj_2, _ = simulate_pendulum(x_init_2, config2)
 
     fig = animate_two_traj(xy_traj_1, xy_traj_2)
     plt.show()

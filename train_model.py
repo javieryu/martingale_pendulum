@@ -157,7 +157,7 @@ def train_predictor(
     # Generate Train Data
     status = f"Generating {num_train_trajs} train trajectories."
     with Status(status):
-        train_trajs, _ = simulator.generate_trajectories(
+        train_trajs, _, _ = simulator.generate_trajectories(
             train_init_bounds, sim_config, num_train_trajs
         )
 
@@ -167,7 +167,7 @@ def train_predictor(
 
     status = f"Generating {num_valid_trajs} validation trajectories"
     with Status(status):
-        valid_trajs, _ = simulator.generate_trajectories(
+        valid_trajs, _, _ = simulator.generate_trajectories(
             valid_init_bounds, sim_config, num_valid_trajs
         )
 
@@ -201,6 +201,12 @@ def single_input_pred(model, state):
     pred = [math.atan2(pred[1], pred[0]), pred[2]]
     return pred
 
+def trajectory_predict(model, states):
+    nn_states = np.array([np.cos(states[:, 0]), np.sin(states[:, 0]), states[:, 1]])
+    nn_states = torch.from_numpy(nn_states).T
+    pred = rollout_predictor(model, nn_states).numpy()
+    pred = np.array([np.arctan2(pred[:, 1], pred[:, 0]), pred[:, 2]]).T
+    return pred
 
 def save_model(model, config):
     # make folder for training run
@@ -210,23 +216,30 @@ def save_model(model, config):
 
     # save network and config dict
     torch.save(model.state_dict(), filepath + "/model")
-    with open(filepath + "/config.yaml", 'w') as file:
+    with open(filepath + "/config.yaml", "w") as file:
         yaml.dump(config, file)
 
 
 def load_model(model_path):
     model = PendulumNetwork().to("cpu").to(torch.double)
-    model.load_state_dict(torch.load(model_path, map_location='cpu'))
+    model.load_state_dict(torch.load(model_path, map_location="cpu"))
     return model
-
 
 
 if __name__ == "__main__":
     train_init_bounds = ([0.0, 0.0], [np.pi / 2, 0.0])
     num_train_trajs = 5000
     num_valid_trajs = 100
-    train_config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0,
-              "num_train_trajs": num_train_trajs, "num_valid_trajs": num_valid_trajs,
-              "train_init_bounds": train_init_bounds}
+    train_config = {
+        "m": [0.5, 0.5],
+        "l": [1.0, 1.0],
+        "b": [0.3, 0.3],
+        "g": [9.81, 9.81],
+        "dt": 0.05,
+        "T": 10.0,
+        "num_train_trajs": num_train_trajs,
+        "num_valid_trajs": num_valid_trajs,
+        "train_init_bounds": train_init_bounds,
+    }
     model = train_predictor(train_init_bounds, train_config)
     save_model(model, train_config)
