@@ -3,6 +3,7 @@ import numpy as np
 import yaml
 import pdb
 import pickle
+from copy import copy
 
 # Local Imports
 import simulator
@@ -31,6 +32,8 @@ if __name__ == "__main__":
     save_dir = "data"
     with open(filename + "/config.yaml") as file:
         train_config = yaml.full_load(file)
+    
+    train_config["num_valid_trajectories"] = 0
 
     """
     Run experiments:
@@ -54,9 +57,9 @@ if __name__ == "__main__":
         same conditions as training.
         """
         init_bounds = ([0.0, 0.0], [np.pi / 2, 0.0])
-        train_config["num_valid_trajectories"] = 0
+        exp_config = copy(train_config)
         states, xys, params = simulator.generate_trajectories(
-            init_bounds, train_config, num_trajectories
+            init_bounds, exp_config, num_trajectories
         )
 
         in_dist_data = []
@@ -78,9 +81,9 @@ if __name__ == "__main__":
         is the opposite of where it was trained [0.0, 0.5 pi].
         """
         init_bounds = ([3 * np.pi / 2, 0.0], [3.99 * np.pi / 2, 0.0])
-        train_config["num_valid_trajectories"] = 0
+        exp_config = copy(train_config)
         states, xys, params = simulator.generate_trajectories(
-            init_bounds, train_config, num_trajectories
+            init_bounds, exp_config, num_trajectories
         )
 
         cov_shift_data = []
@@ -97,7 +100,29 @@ if __name__ == "__main__":
             pickle.dump(cov_shift_data, f)
 
     if experiment_name == "gradual_concept_shift" or experiment_name == "all":
-        pass
+        """
+        Gradual concept shift, pendulum length changes linearly from 0.2 to 1.0 during the
+        trajectory rollout.
+        """
+        init_bounds = ([3 * np.pi / 2, 0.0], [3.99 * np.pi / 2, 0.0])
+        exp_config = copy(train_config)
+        exp_config["l"] = [0.2, 1.0]
+        states, xys, params = simulator.generate_trajectories(
+            init_bounds, exp_config, num_trajectories
+        )
+
+        gcon_shift_data = []
+        for k in range(num_trajectories):
+            input_states = states[k][:-1, :]
+            pred_states = train_model.trajectory_predict(model, input_states)
+            gt_states = states[k][1:, :]
+            gt_xy = xys[k][1:, :]
+            ls = params[k][1:, 1]  # [m, l, b, g]
+            pred_xy = simulator.get_xy(pred_states[:, 0], ls)
+            gcon_shift_data.append([gt_states, pred_states, gt_xy, pred_xy, params[k]])
+
+        with open(save_dir + "/gcon_shift.pkl", "wb") as f:
+            pickle.dump(gcon_shift_data, f)
 
     if experiment_name == "abrupt_concept_shift" or experiment_name == "all":
         pass
