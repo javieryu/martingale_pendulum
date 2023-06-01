@@ -75,6 +75,41 @@ def pendulum_dynamics(x, dt, m=1.0, l=1.0, b=1.0, g=9.81):
     return x + (dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
 
 
+def double_pendulum_continuous(x, m1, m2, l1, l2, b1, b2, g):
+    """
+    https://ir.canterbury.ac.nz/bitstream/handle/10092/12659/chen_2008_report.pdf
+    """
+    th1, th2, dth1, dth2 = x
+    delth = th1 - th2
+    alpha = b1 * dth1
+    beta = b2 * dth2
+    ddth1 = (
+        m2 * l1 * (dth1 ** 2) * np.sin(2 * delth)
+        + 2 * m2 * l2 * (dth2 ** 2) * np.sin(delth)
+        + 2 * g * m2 * np.cos(th2) * np.sin(delth)
+        + 2 * g * m1 * np.sin(th1)
+        + 2 * alpha
+        - 2 * beta * np.cos(delth)
+    ) / (-2 * l1 * (m1 + m2 * np.sin(delth) ** 2))
+    ddth2 = (
+        m2 * l2 * (dth2 ** 2) * np.sin(2 * delth)
+        + 2 * (m1 + m2) * l1 * (dth1 ** 2) * np.sin(delth)
+        + 2 * g * (m1 + m2) * np.cos(th1) * np.sin(delth)
+        + 2 * alpha * np.cos(delth)
+        - 2 * (m1 + m2) * beta / m2
+    ) / (2 * l2 * (m1 + m2 * np.sin(delth) ** 2))
+
+    return np.array([dth1, dth2, ddth1, ddth2])
+
+
+def double_pendulum_dynamics(x, dt, m1, m2, l1, l2, b1, b2, g):
+    k1 = double_pendulum_continuous(x, m1, m2, l1, l2, b1, b2, g)
+    k2 = double_pendulum_continuous(x + dt * 0.5 * k1, m1, m2, l1, l2, b1, b2, g)
+    k3 = double_pendulum_continuous(x + dt * 0.5 * k2, m1, m2, l1, l2, b1, b2, g)
+    k4 = double_pendulum_continuous(x + dt * k3, m1, m2, l1, l2, b1, b2, g)
+    return x + (dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+
+
 def generate_trajectories(
     init_bounds,
     sim_config,
