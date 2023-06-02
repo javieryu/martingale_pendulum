@@ -79,7 +79,7 @@ def lb_pm_eb(Zs, delta):
 	c = 0.5
 	for idx,t in enumerate(range(1,T+1)):
 		mus[idx] = (0.5 + np.sum(Zs[:idx+1])) / (t+1)
-		var = (0.25 + np.sum((Zs - mus)**2[:idx+1])) / (t+1)
+		var = (0.25 + np.sum(((Zs - mus)**2)[:idx+1])) / (t+1)
 		lambdas[idx] = np.min(c, np.sqrt((2*np.log(1/delta)) / (var * t * np.log(t+1))))
 		
 		if t == 1:
@@ -116,12 +116,13 @@ def lb_betting(Z):
 
 
 
-def lb_cm_eb(Z):
+def lb_cm_eb(Zs, delta):
 	"""
 	Conjugate-mixture empirical-Bernstein confidence sequence
 	"""
-	None
-	return lb
+	v_opt = len(Zs) / 2 # make bound tightest halfway through traj
+	lbs = confseq.conjmix_empbern_lower_cs(Zs, v_opt, alpha=delta, running_intersection = False)
+	return lbs
 
 
 def source_risk_ub():
