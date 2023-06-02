@@ -125,4 +125,7 @@ if __name__ == "__main__":
             pickle.dump(gcon_shift_data, f)
 
     if experiment_name == "abrupt_concept_shift" or experiment_name == "all":
+        """
+        Abrupt concept shift, double pendulum dynamics after training on single.
+        """
         pass

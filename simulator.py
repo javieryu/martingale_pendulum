@@ -96,7 +96,7 @@ def pendulum_continuous(x, m, l, b, g):
     x = [0, 0] is upright; positive theta is clockwise.
     """
     theta, theta_dot = x
-    theta_ddot = (m * g * l * np.sin(theta) - b * theta_dot) / (m * l ** 2)
+    theta_ddot = (-m * g * l * np.sin(theta) - b * theta_dot) / (m * l ** 2)
 
     return np.array([theta_dot, theta_ddot])
 
@@ -214,7 +214,7 @@ def cossin_to_rad(trajectory):
 
 def get_xy(theta, l):
     """Return the (x, y) coordinates of the bob at angle theta"""
-    return l * np.sin(theta), l * np.cos(theta)
+    return l * np.sin(theta), -l * np.cos(theta)
 
 def get_double_xy(theta1, theta2, l1, l2):
     """Return the (x, y) coordinates of the bobs of the double pendulums."""
@@ -288,9 +288,11 @@ def animate_double_traj(xy_traj):
     circle2 = ax.add_patch(plt.Circle(xy_traj[0, 2:], bob_radius, fc="red", zorder=3))
 
     # Set the plot limits so that the pendulum has room to swing
-    l = np.sqrt(xy_traj[0, 2] ** 2 + xy_traj[0, 3] ** 2)  # lenth of pendulum
-    ax.set_xlim(-1.2 * l, 1.2 * l)
-    ax.set_ylim(-1.2 * l, 1.2 * l)
+    xmax = np.amax(np.abs(xy_traj[:, 2]))
+    ymax = np.amax(np.abs(xy_traj[:, 3])) 
+    lim_val = max(xmax, ymax)
+    ax.set_xlim(-1.2 * lim_val, 1.2 * lim_val)
+    ax.set_ylim(-1.2 * lim_val, 1.2 * lim_val)
 
     nframes = xy_traj.shape[0]
     ani = animation.FuncAnimation(
@@ -389,50 +391,50 @@ def make_pendulum_figure(theta):
 
 
 if __name__ == "__main__":
-    ### Script Single ###
+    ## Script Single ###
     # specify model params and init condition
-    # x_init_1 = np.array([0.1, 0])  # slightly right of upright
-    # x_init_2 = np.array([3.9 * np.pi / 2, 0])  # 90 deg right
-    # config1 = {
-    #     "m": [0.5, 0.5],
-    #     "l": [1.0, 1.0],
-    #     "b": [0.3, 0.3],
-    #     "g": [9.81, 9.81],
-    #     "dt": 0.05,
-    #     "T": 10.0,
-    # }
-    # config2 = {
-    #     "m": [0.5, 0.5],
-    #     "l": [1.0, 0.5],
-    #     "b": [0.3, 0.3],
-    #     "g": [9.81, 9.81],
-    #     "dt": 0.05,
-    #     "T": 10.0,
-    # }
-    #
-    # # make and save pendulum figure
-    # # make_pendulum_figure(np.pi/6)
-    #
-    # # solve for trajectory
-    # state_traj_1, xy_traj_1, _ = simulate_pendulum(x_init_1, config1)
-    # state_traj_2, xy_traj_2, _ = simulate_pendulum(x_init_2, config2)
-    #
-    # fig = animate_two_traj(xy_traj_1, xy_traj_2)
-    # plt.show()
-
-    ### Script double ###
-    x_init_1 = np.array([0.9 * np.pi, 0.9 * np.pi, 0.0, 0.0])  # slightly right of upright
+    x_init_1 = np.array([0.9 * np.pi, 0])  # slightly right of upright
+    x_init_2 = np.array([np.pi / 2, 0])  # 90 deg right
     config1 = {
-        "m1": [0.5, 0.5],
-        "m2": [0.5, 0.5],
-        "l1": [1.0, 1.0],
-        "l2": [1.0, 1.0],
-        "b1": [0.3, 0.3],
-        "b2": [0.3, 0.3],
+        "m": [0.5, 0.5],
+        "l": [1.0, 1.0],
+        "b": [0.3, 0.3],
         "g": [9.81, 9.81],
         "dt": 0.05,
         "T": 10.0,
     }
-    state_traj_1, xy_traj_1, _ = simulate_double_pendulum(x_init_1, config1)
-    fig = animate_double_traj(xy_traj_1)
+    config2 = {
+        "m": [0.5, 0.5],
+        "l": [1.0, 0.5],
+        "b": [0.3, 0.3],
+        "g": [9.81, 9.81],
+        "dt": 0.05,
+        "T": 10.0,
+    }
+
+    # make and save pendulum figure
+    # make_pendulum_figure(np.pi/6)
+
+    # solve for trajectory
+    state_traj_1, xy_traj_1, _ = simulate_pendulum(x_init_1, config1)
+    state_traj_2, xy_traj_2, _ = simulate_pendulum(x_init_2, config2)
+
+    fig = animate_two_traj(xy_traj_1, xy_traj_2)
     plt.show()
+
+    # ### Script double ###
+    # x_init_1 = np.array([0.9 * np.pi, 0.9 * np.pi, 0.0, 0.0])  # slightly right of upright
+    # config1 = {
+    #     "m1": [0.5, 0.5],
+    #     "m2": [0.5, 0.5],
+    #     "l1": [0.1, 1.0],
+    #     "l2": [0.1, 1.0],
+    #     "b1": [0.3, 0.3],
+    #     "b2": [0.3, 0.3],
+    #     "g": [9.81, 9.81],
+    #     "dt": 0.05,
+    #     "T": 10.0,
+    # }
+    # state_traj_1, xy_traj_1, _ = simulate_double_pendulum(x_init_1, config1)
+    # fig = animate_double_traj(xy_traj_1)
+    # plt.show()
