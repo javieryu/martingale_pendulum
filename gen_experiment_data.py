@@ -157,5 +157,5 @@ if __name__ == "__main__":
             )
             acon_shift_data.append([gt_states, pred_states, gt_xy, pred_xy, params[k]])
 
-        with open(save_dir + "/gcon_shift.pkl", "wb") as f:
+        with open(save_dir + "/acon_shift.pkl", "wb") as f:
             pickle.dump(acon_shift_data, f)
