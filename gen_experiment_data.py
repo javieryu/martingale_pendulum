@@ -28,11 +28,11 @@ if __name__ == "__main__":
     model = train_model.load_model(filename + "/model")
     num_steps = 200  # T = 10, dt = 0.05
     num_trajectories = 1000
-    experiment_name = "gcon_shift"
+    experiment_name = "all"
     save_dir = "data"
     with open(filename + "/config.yaml") as file:
         train_config = yaml.full_load(file)
-    
+
     train_config["num_valid_trajectories"] = 0
 
     """
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         In distribution, generate trajectories and predict with exactly the
         same conditions as training.
         """
-        init_bounds = ([0.0, 0.0], [np.pi / 2, 0.0])
+        init_bounds = ([np.pi / 2, 0.0], [np.pi, 0.0])
         exp_config = copy(train_config)
         states, xys, params = simulator.generate_trajectories(
             init_bounds, exp_config, num_trajectories
@@ -128,5 +128,34 @@ if __name__ == "__main__":
         """
         Abrupt concept shift, double pendulum dynamics after training on single.
         """
+        init_bounds = ([np.pi / 2, np.pi / 2, 0.0, 0.0], [np.pi, np.pi, 0.0, 0.0])
+        exp_config = {
+            "m1": [0.5, 0.5],
+            "m2": [0.5, 0.5],
+            "l1": [1.0, 1.0],
+            "l2": [0.5, 0.5],
+            "b1": [0.3, 0.3],
+            "b2": [0.3, 0.3],
+            "g": [9.81, 9.81],
+            "dt": 0.05,
+            "T": 10.0,
+        }
+        states, xys, params = simulator.generate_double_trajectories(
+            init_bounds, exp_config, num_trajectories
+        )
 
-        pass
+        acon_shift_data = []
+        for k in range(num_trajectories):
+            input_states = states[k][:-1, :]
+            pred_states = train_model.trajectory_predict(model, input_states)
+            gt_states = states[k][1:, :]
+            gt_xy = xys[k][1:, :]
+            l1s = params[k][1:, 2]  # [m, l, b, g]
+            l2s = params[k][1:, 3]  # [m, l, b, g]
+            pred_xy = simulator.get_double_xy(
+                pred_states[:, 0], pred_states[:, 1], l1s, l2s
+            )
+            acon_shift_data.append([gt_states, pred_states, gt_xy, pred_xy, params[k]])
+
+        with open(save_dir + "/gcon_shift.pkl", "wb") as f:
+            pickle.dump(acon_shift_data, f)

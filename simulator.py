@@ -82,7 +82,9 @@ def simulate_double_pendulum(x_init, config):
         state_traj[step, :] = double_pendulum_dynamics(
             state_traj[step - 1, :], dt, m1(r), m2(r), l1(r), l2(r), b1(r), b2(r), g(r)
         )
-        xy_traj[step, :] = get_double_xy(state_traj[step, 0], state_traj[step, 1], l1(r), l2(r))
+        xy_traj[step, :] = get_double_xy(
+            state_traj[step, 0], state_traj[step, 1], l1(r), l2(r)
+        )
         param_traj[step, :] = np.array([m1(r), m2(r), l1(r), l2(r), b1(r), b2(r), g(r)])
 
     state_traj[:, 0:2] = np.mod(state_traj[:, 0:2], 2 * np.pi)
@@ -191,6 +193,49 @@ def generate_trajectories(
     return zip(*trajs)
 
 
+def generate_double_trajectories(
+    init_bounds,
+    sim_config,
+    num_trajectories,
+    init_dist="uniform",
+    use_mp=True,
+    workers=4,
+):
+    """
+    Generates num_trajectories number of double pendulum trajectories
+    that are sampled from initial conditions with a specified
+    support and distribution.
+
+    init_bounds: state init bounds formatted as tuple(lows, highs) where
+        lows/highs are lists of length = state_dim.
+    sim_config: dictionary of configuration settings for simulator.
+    num_trajectories: int, number of trajectories to simulate.
+    init_dist: distribution over initial conditions.
+        Options are ["uniform", ]
+    use_mp: bool to use multiple threads to compute trajectories
+    workers: int number of threads to use in multiprocessing
+
+    Returns two lists of trajectories where each trajectory
+    is a numpy array [time, state_dim], and the first list is theta state and
+    the second list is xy state.
+    """
+
+    if init_dist == "uniform":
+        state_inits = [np.random.uniform(*init_bounds) for _ in range(num_trajectories)]
+    else:
+        raise NameError("simulator.py: Unknown initial state distribution type.")
+
+    if use_mp:
+        pool = mp.Pool(workers)
+        trajs = pool.starmap(
+            simulate_double_pendulum, zip(state_inits, itertools.repeat(sim_config))
+        )
+    else:
+        trajs = [simulate_double_pendulum(init, sim_config) for init in state_inits]
+
+    return zip(*trajs)
+
+
 def rad_to_cossin(trajectory):
     return torch.cat(
         (
@@ -216,11 +261,13 @@ def get_xy(theta, l):
     """Return the (x, y) coordinates of the bob at angle theta"""
     return l * np.sin(theta), -l * np.cos(theta)
 
+
 def get_double_xy(theta1, theta2, l1, l2):
     """Return the (x, y) coordinates of the bobs of the double pendulums."""
     x1, y1 = l1 * np.sin(theta1), -l1 * np.cos(theta1)
     x2, y2 = x1 + l2 * np.sin(theta2), y1 - l2 * np.cos(theta2)
     return np.stack([x1, y1, x2, y2])
+
 
 def animate(i, xy_traj, line, circle):
     """Update the animation at frame i."""
@@ -228,12 +275,14 @@ def animate(i, xy_traj, line, circle):
     line.set_data([0, x], [0, y])
     circle.set_center((x, y))
 
+
 def animate_double(i, xy_traj, line, circle1, circle2):
-    """ Update the animation for a sinlge frame of double pendulum."""
+    """Update the animation for a sinlge frame of double pendulum."""
     x1, y1, x2, y2 = xy_traj[i, :]
     line.set_data([0, x1, x2], [0, y1, y2])
     circle1.set_center([x1, y1])
     circle2.set_center([x2, y2])
+
 
 def animate_two(i, xy_traj_1, line_1, circle_1, xy_traj_2, line_2, circle_2):
     """Update the 2 traj animation at frame i."""
@@ -274,13 +323,19 @@ def animate_single_traj(xy_traj):
     fig.ani = ani
     return fig
 
+
 def animate_double_traj(xy_traj):
     """Makes an animation of a double pendulum trajectory"""
     fig = plt.figure()
     ax = fig.add_subplot(aspect="equal")
 
     # The pendulum rod, in its initial position.
-    (line,) = ax.plot([0, xy_traj[0, 0], xy_traj[0, 2]], [0, xy_traj[0, 1], xy_traj[0, 3]], lw=3, c="black")
+    (line,) = ax.plot(
+        [0, xy_traj[0, 0], xy_traj[0, 2]],
+        [0, xy_traj[0, 1], xy_traj[0, 3]],
+        lw=3,
+        c="black",
+    )
 
     # The pendulum bob: set zorder so that it is drawn over the pendulum rod.
     bob_radius = 0.08
@@ -289,7 +344,7 @@ def animate_double_traj(xy_traj):
 
     # Set the plot limits so that the pendulum has room to swing
     xmax = np.amax(np.abs(xy_traj[:, 2]))
-    ymax = np.amax(np.abs(xy_traj[:, 3])) 
+    ymax = np.amax(np.abs(xy_traj[:, 3]))
     lim_val = max(xmax, ymax)
     ax.set_xlim(-1.2 * lim_val, 1.2 * lim_val)
     ax.set_ylim(-1.2 * lim_val, 1.2 * lim_val)
@@ -304,6 +359,7 @@ def animate_double_traj(xy_traj):
     )
     fig.ani = ani
     return fig
+
 
 def animate_two_traj(xy_traj_1, xy_traj_2):
     """Makes an animation of two trajectories with xy_traj_2 transparent"""
