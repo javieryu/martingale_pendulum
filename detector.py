@@ -2,44 +2,62 @@ import numpy as np
 import confseq
 
 """
-Detector related code goes in here.
+This file has code for
+	1. upper bounding the source risk
+	2. lower bounding the target risk
+
+The PM-H, PM-EB, and Betting confidence sequences assume that target data consists of iid samples from an unknown distribution
+The Betting bound is currently not implemented
+The CM-EB confidence sequence assumes that the target data is a "predictable sequence", this is what we use for the time-varying distribution shift
 """
 
-def sequential_test(pred_seq, true_seq, tol, ub_source):
-	T = len(true_seq)
-	lb_target = np.zeros(T)
-	alert = np.zeros(T)
 
-	for t in range(T):
-		lb_target[t] = target_risk_lb(pred_seq[0:t+1], true_seq[0:t+1], method="PM-H")
-		alert = lb_target > ub_source + tol
-
-	return lb_target, alert
-		
-
-
-def target_risk_lb(pred_seq, true_seq, method="PM-H"):
+def source_risk_ub(pred_seq, true_seq, delta):
 	"""
-	computes a lower confidence sequence for the target risk
-	method: "PM-H", "PM-EB", "Betting", "CM-EB" 
+	Use PM-EB method to upper bound source risk
+	Risk is the expected value of absolute error
+	pred_seq: array of network predictions where pred_seq.shape = (# predictions, prediction dimension)
+	true_seq: array of true labels corresponding to each network prediction
+	delta: upper bound holds with probability 1-delta
 	"""
-	risks = pred_seq - true_seq
+	risks = np.abs(pred_seq - true_seq) # consider absolute error as risk metric
+	_, ubs = bounds_pm_eb(risks, delta)
+
+	ub_source = ubs[-1]
+
+	return ub_source
+
+
+
+def sequential_test(pred_seq, true_seq, delta, tol, ub_source, method="PM-H"):
+	"""
+	pred_seq: array of network predictions where pred_seq.shape = (# predictions, prediction dimension)
+	true_seq: array of true labels corresponding to each network prediction
+	delta: target risk lower bounds holds with probability 1-delta
+	tol: how much slack between source and target risk to allow before raising alert
+	ub_source: upper bound on the source risk
+	Risk is expected value of absolute error
+	"""
+
+	risks = np.abs(pred_seq - true_seq) # consider absolute error as risk metric
 
 	if method == "PM-H":
-		lb = lb_pm_h(risks)
+		lbs_target, _ = bounds_pm_h(risks, delta)
 	elif method == "PM-EB":
-		lb = lb_pm_eb(risks)
+		lbs_target, _ = bounds_pm_eb(risks, delta)
 	elif method == "Betting":
-		lb = lb_betting(risks)
+		lbs_target = bounds_betting(risks, delta)
 	elif method == "CM-EB":
-		lb = lb_cm_eb(risks)
+		lbs_target = bounds_cm_eb(risks, delta)
 
-	return lb
+	alerts = lbs_target > (ub_source + tol) # make boolean array of if alert is raised
+
+	return lbs_target, alerts
 
 
 
 
-def lb_pm_h(Zs, delta):
+def bounds_pm_h(Zs, delta):
 	"""
 	Predictably-mixed Hoeffding's confidence sequence
 	"""
@@ -65,7 +83,8 @@ def lb_pm_h(Zs, delta):
 	return lb, ub
 
 
-def lb_pm_eb(Zs, delta):
+
+def bounds_pm_eb(Zs, delta):
 	"""
 	Predictably-mixed empirical-Bernstein confidence sequence
 	"""
@@ -104,7 +123,7 @@ def lb_pm_eb(Zs, delta):
 
 
 
-def lb_betting(Z):
+def bounds_betting(Z):
 	"""
 	Betting-based confidence sequence.
 	Might not implement.
@@ -114,20 +133,13 @@ def lb_betting(Z):
 
 
 
-
-
-def lb_cm_eb(Zs, delta):
+def bounds_cm_eb(Zs, delta):
 	"""
-	Conjugate-mixture empirical-Bernstein confidence sequence
+	Conjugate-Mixture Empirical-Bernstein confidence sequence
 	"""
 	v_opt = len(Zs) / 2 # make bound tightest halfway through traj
-	lbs = confseq.conjmix_empbern_lower_cs(Zs, v_opt, alpha=delta, running_intersection = False)
+	lbs = confseq.conjmix_empbern_lower_cs(Zs, v_opt, alpha=delta, running_intersection=False)
 	return lbs
 
 
-def source_risk_ub():
-	"""
-	Use standard results for bounding iid source risk
-	"""
-	None
-	return ub
+
