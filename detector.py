@@ -1,4 +1,5 @@
 import numpy as np
+import confseq
 
 """
 Detector related code goes in here.
@@ -100,12 +101,19 @@ def lb_pm_eb(Zs, delta):
 
 	return lbs, ubs
 
+
+
+
 def lb_betting(Z):
 	"""
-	Betting-based confidence sequence
+	Betting-based confidence sequence.
+	Might not implement.
 	"""
 	None
-	return lb
+	return None
+
+
+
 
 
 def lb_cm_eb(Z):
