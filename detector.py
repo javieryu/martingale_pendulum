@@ -1,5 +1,8 @@
 import numpy as np
 import confseq
+import pickle
+import matplotlib.pyplot as plt
+import os
 
 """
 This file has code for
@@ -20,7 +23,7 @@ def source_risk_ub(pred_seq, true_seq, delta):
 	true_seq: array of true labels corresponding to each network prediction
 	delta: upper bound holds with probability 1-delta
 	"""
-	risks = np.abs(pred_seq - true_seq) # consider absolute error as risk metric
+	risks = np.linalg.norm(pred_seq - true_seq, ord=1, axis=1) # consider L1 error as risk metric
 	_, ubs = bounds_pm_eb(risks, delta)
 
 	ub_source = ubs[-1]
@@ -39,7 +42,7 @@ def sequential_test(pred_seq, true_seq, delta, tol, ub_source, method="PM-H"):
 	Risk is expected value of absolute error
 	"""
 
-	risks = np.abs(pred_seq - true_seq) # consider absolute error as risk metric
+	risks = np.linalg.norm(pred_seq - true_seq, ord=1, axis=1) # consider absolute error as risk metric
 
 	if method == "PM-H":
 		lbs_target, _ = bounds_pm_h(risks, delta)
@@ -67,7 +70,7 @@ def bounds_pm_h(Zs, delta):
 	lambdas = np.zeros(T)
 	psis = np.zeros(T)
 	for idx,t in enumerate(range(1,T+1)):
-		lambdas[idx] = np.min(1, np.sqrt((8*np.log(1/delta)) / (t*np.log(t+1))))
+		lambdas[idx] = min(1, np.sqrt((8*np.log(1/delta)) / (t*np.log(t+1))))
 		psis[idx] = lambdas[t]**2 / 8
 
 		# compute first term in lb/ub
@@ -99,7 +102,7 @@ def bounds_pm_eb(Zs, delta):
 	for idx,t in enumerate(range(1,T+1)):
 		mus[idx] = (0.5 + np.sum(Zs[:idx+1])) / (t+1)
 		var = (0.25 + np.sum(((Zs - mus)**2)[:idx+1])) / (t+1)
-		lambdas[idx] = np.min(c, np.sqrt((2*np.log(1/delta)) / (var * t * np.log(t+1))))
+		lambdas[idx] = min(c, np.sqrt((2*np.log(1/delta)) / (var * t * np.log(t+1))))
 		
 		if t == 1:
 			vs[idx] = 4 * (Zs[idx])**2 # assume initial empirical mean is zero
@@ -141,5 +144,71 @@ def bounds_cm_eb(Zs, delta):
 	lbs = confseq.conjmix_empbern_lower_cs(Zs, v_opt, alpha=delta, running_intersection=False)
 	return lbs
 
+
+
+if __name__ == "__main__":
+	# define hyperparameters
+	delta = 0.1
+	tol = 1e-4
+
+	# load the in-distribution test data
+	# data format: list of lists. Outer list is each traj. Inner lists are gt_states, pred_states, gt_xy, pred_xy, params
+	file = open('data/no_shift.pkl', 'rb')
+	data_no_shift = pickle.load(file)
+	file.close()
+
+	file = open('data/cov_shift.pkl', 'rb')
+	data_cov_shift = pickle.load(file)
+	file.close()
+
+	file = open('data/gcon_shift.pkl', 'rb')
+	data_gcon_shift = pickle.load(file)
+	file.close()
+
+	num_trajs = len(data_no_shift)
+	T = len(data_no_shift[0][0])
+
+	print("Number of trajectories: ", num_trajs)
+	print("Length of each trajectory: ", T)
+
+	# compute upper bound on source risk
+	pred_seq_id = np.vstack([data_no_shift[t][1] for t in range(T)])
+	true_seq_id = np.vstack([data_no_shift[t][0] for t in range(T)])
+	# pred_seq_id, true_seq_id = data_no_shift[0][1], data_no_shift[0][0]
+	print("pred_seq_id.shape = ", pred_seq_id.shape)
+	print("true_seq_id.shape = ", pred_seq_id.shape)
+
+	ub_source = source_risk_ub(pred_seq_id, true_seq_id, delta)
+	print("Source Risk UB: ", ub_source)
+
+	# load in target data for each experiment - for now just for traj 0
+	pred_seq_no_shift, true_seq_no_shift = data_no_shift[0][1], data_no_shift[0][0]
+	pred_seq_cov_shift, true_seq_cov_shift = data_cov_shift[0][1], data_cov_shift[0][0]
+	pred_seq_gcon_shift, true_seq_gcon_shift = data_gcon_shift[0][1], data_gcon_shift[0][0]
+
+	print("pred_seq_cov_shift.shape = ", pred_seq_cov_shift.shape)
+	print("true_seq_cov_shift.shape = ", true_seq_cov_shift.shape)
+
+	print("pred_seq_gcon_shift.shape = ", pred_seq_gcon_shift.shape)
+	print("true_seq_gcon_shift.shape = ", true_seq_gcon_shift.shape)
+
+	# compute lower bound on target risk
+	lb_no_shift, alert_no_shift = sequential_test(pred_seq_no_shift, true_seq_no_shift, delta, tol, ub_source, method="PM-EB")
+	lb_cov_shift, alert_cov_shift = sequential_test(pred_seq_cov_shift, true_seq_cov_shift, delta, tol, ub_source, method="PM-EB")
+	# lb_gcon_shift, alert_gcon_shift = sequential_test(pred_seq_gcon_shift, true_seq_gcon_shift, delta, tol, ub_source, method="CM-EB")
+
+	print("lb_cov_shift.shape: ", lb_cov_shift.shape)
+	# print(lb_cov_shift)
+
+	# plot results of each experiment
+	# make and save figure
+	fig = plt.figure(figsize=(5,3))
+	plt.axhline(y = ub_source, color = 'black', linestyle = '-')
+	plt.plot(np.arange(1,T+1,1), lb_cov_shift, color='skyblue')
+	plt.xlabel(r"Time Step, $t$.")
+	plt.ylabel(r"Risk, $\mathbb{E}[\Vert \hat{x}_{t+1} - x_{t+1} \Vert_1]$")
+	plt.show()
+
+	fig.savefig(os.path.join("figures", "cov_shift.png"))
 
 
