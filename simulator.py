@@ -51,6 +51,44 @@ def simulate_pendulum(x_init, config):
     return [state_traj, xy_traj, param_traj]
 
 
+def simulate_double_pendulum(x_init, config):
+    """
+    Takes initial conditions and rolls out the dynamics for a fixed time frame.
+    x_init: state at t = 0, [theta (radians), theta_dot (radians / s)]
+    T: duration of simulation in seconds
+    dt: discrete time-steps to simulate
+    config: contains dynamics model parameters
+    """
+    m1 = generate_linear_mix_lambda(config["m1"])
+    m2 = generate_linear_mix_lambda(config["m2"])
+    l1 = generate_linear_mix_lambda(config["l1"])
+    l2 = generate_linear_mix_lambda(config["l2"])
+    b1 = generate_linear_mix_lambda(config["b1"])
+    b2 = generate_linear_mix_lambda(config["b2"])
+    g = generate_linear_mix_lambda(config["g"])
+    T = config["T"]
+    dt = config["dt"]
+
+    n_steps = int(np.ceil(T / dt))
+
+    state_traj = np.zeros((n_steps, 4))
+    param_traj = np.zeros((n_steps, 7))
+    xy_traj = np.zeros_like(state_traj)
+    state_traj[0, :] = x_init
+    param_traj[0, :] = np.array([m1(0), m2(0), l1(0), l2(0), b1(0), b2(0), g(0)])
+    xy_traj[0, :] = get_double_xy(state_traj[0, 0], state_traj[0, 1], l1(0), l2(0))
+    for step in range(1, n_steps):
+        r = step / n_steps
+        state_traj[step, :] = double_pendulum_dynamics(
+            state_traj[step - 1, :], dt, m1(r), m2(r), l1(r), l2(r), b1(r), b2(r), g(r)
+        )
+        xy_traj[step, :] = get_double_xy(state_traj[step, 0], state_traj[step, 1], l1(r), l2(r))
+        param_traj[step, :] = np.array([m1(r), m2(r), l1(r), l2(r), b1(r), b2(r), g(r)])
+
+    state_traj[:, 0:2] = np.mod(state_traj[:, 0:2], 2 * np.pi)
+    return [state_traj, xy_traj, param_traj]
+
+
 def pendulum_continuous(x, m, l, b, g):
     """
     Describes the continuous-time dynamics of an unforced, damped pendulum.
@@ -178,6 +216,11 @@ def get_xy(theta, l):
     """Return the (x, y) coordinates of the bob at angle theta"""
     return l * np.sin(theta), l * np.cos(theta)
 
+def get_double_xy(theta1, theta2, l1, l2):
+    """Return the (x, y) coordinates of the bobs of the double pendulums."""
+    x1, y1 = l1 * np.sin(theta1), -l1 * np.cos(theta1)
+    x2, y2 = x1 + l2 * np.sin(theta2), y1 - l2 * np.cos(theta2)
+    return np.stack([x1, y1, x2, y2])
 
 def animate(i, xy_traj, line, circle):
     """Update the animation at frame i."""
@@ -185,6 +228,12 @@ def animate(i, xy_traj, line, circle):
     line.set_data([0, x], [0, y])
     circle.set_center((x, y))
 
+def animate_double(i, xy_traj, line, circle1, circle2):
+    """ Update the animation for a sinlge frame of double pendulum."""
+    x1, y1, x2, y2 = xy_traj[i, :]
+    line.set_data([0, x1, x2], [0, y1, y2])
+    circle1.set_center([x1, y1])
+    circle2.set_center([x2, y2])
 
 def animate_two(i, xy_traj_1, line_1, circle_1, xy_traj_2, line_2, circle_2):
     """Update the 2 traj animation at frame i."""
@@ -225,6 +274,34 @@ def animate_single_traj(xy_traj):
     fig.ani = ani
     return fig
 
+def animate_double_traj(xy_traj):
+    """Makes an animation of a double pendulum trajectory"""
+    fig = plt.figure()
+    ax = fig.add_subplot(aspect="equal")
+
+    # The pendulum rod, in its initial position.
+    (line,) = ax.plot([0, xy_traj[0, 0], xy_traj[0, 2]], [0, xy_traj[0, 1], xy_traj[0, 3]], lw=3, c="black")
+
+    # The pendulum bob: set zorder so that it is drawn over the pendulum rod.
+    bob_radius = 0.08
+    circle1 = ax.add_patch(plt.Circle(xy_traj[0, :2], bob_radius, fc="red", zorder=3))
+    circle2 = ax.add_patch(plt.Circle(xy_traj[0, 2:], bob_radius, fc="red", zorder=3))
+
+    # Set the plot limits so that the pendulum has room to swing
+    l = np.sqrt(xy_traj[0, 2] ** 2 + xy_traj[0, 3] ** 2)  # lenth of pendulum
+    ax.set_xlim(-1.2 * l, 1.2 * l)
+    ax.set_ylim(-1.2 * l, 1.2 * l)
+
+    nframes = xy_traj.shape[0]
+    ani = animation.FuncAnimation(
+        fig,
+        lambda i: animate_double(i, xy_traj, line, circle1, circle2),
+        frames=range(nframes),
+        repeat=True,
+        interval=0.05 * 1000,
+    )
+    fig.ani = ani
+    return fig
 
 def animate_two_traj(xy_traj_1, xy_traj_2):
     """Makes an animation of two trajectories with xy_traj_2 transparent"""
@@ -312,33 +389,50 @@ def make_pendulum_figure(theta):
 
 
 if __name__ == "__main__":
-    ### Script ###
+    ### Script Single ###
     # specify model params and init condition
-    x_init_1 = np.array([0.1, 0])  # slightly right of upright
-    x_init_2 = np.array([3.9 * np.pi / 2, 0])  # 90 deg right
+    # x_init_1 = np.array([0.1, 0])  # slightly right of upright
+    # x_init_2 = np.array([3.9 * np.pi / 2, 0])  # 90 deg right
+    # config1 = {
+    #     "m": [0.5, 0.5],
+    #     "l": [1.0, 1.0],
+    #     "b": [0.3, 0.3],
+    #     "g": [9.81, 9.81],
+    #     "dt": 0.05,
+    #     "T": 10.0,
+    # }
+    # config2 = {
+    #     "m": [0.5, 0.5],
+    #     "l": [1.0, 0.5],
+    #     "b": [0.3, 0.3],
+    #     "g": [9.81, 9.81],
+    #     "dt": 0.05,
+    #     "T": 10.0,
+    # }
+    #
+    # # make and save pendulum figure
+    # # make_pendulum_figure(np.pi/6)
+    #
+    # # solve for trajectory
+    # state_traj_1, xy_traj_1, _ = simulate_pendulum(x_init_1, config1)
+    # state_traj_2, xy_traj_2, _ = simulate_pendulum(x_init_2, config2)
+    #
+    # fig = animate_two_traj(xy_traj_1, xy_traj_2)
+    # plt.show()
+
+    ### Script double ###
+    x_init_1 = np.array([0.9 * np.pi, 0.9 * np.pi, 0.0, 0.0])  # slightly right of upright
     config1 = {
-        "m": [0.5, 0.5],
-        "l": [1.0, 1.0],
-        "b": [0.3, 0.3],
+        "m1": [0.5, 0.5],
+        "m2": [0.5, 0.5],
+        "l1": [1.0, 1.0],
+        "l2": [1.0, 1.0],
+        "b1": [0.3, 0.3],
+        "b2": [0.3, 0.3],
         "g": [9.81, 9.81],
         "dt": 0.05,
         "T": 10.0,
     }
-    config2 = {
-        "m": [0.5, 0.5],
-        "l": [1.0, 0.5],
-        "b": [0.3, 0.3],
-        "g": [9.81, 9.81],
-        "dt": 0.05,
-        "T": 10.0,
-    }
-
-    # make and save pendulum figure
-    # make_pendulum_figure(np.pi/6)
-
-    # solve for trajectory
-    state_traj_1, xy_traj_1, _ = simulate_pendulum(x_init_1, config1)
-    state_traj_2, xy_traj_2, _ = simulate_pendulum(x_init_2, config2)
-
-    fig = animate_two_traj(xy_traj_1, xy_traj_2)
+    state_traj_1, xy_traj_1, _ = simulate_double_pendulum(x_init_1, config1)
+    fig = animate_double_traj(xy_traj_1)
     plt.show()
