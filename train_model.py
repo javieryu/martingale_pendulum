@@ -227,7 +227,7 @@ def load_model(model_path):
 
 
 if __name__ == "__main__":
-    train_init_bounds = ([0.0, 0.0], [np.pi / 2, 0.0])
+    train_init_bounds = ([np.pi / 2, 0.0], [np.pi, 0.0])
     num_train_trajs = 5000
     num_valid_trajs = 100
     train_config = {

@@ -24,10 +24,10 @@ if __name__ == "__main__":
         4. define experiment name
     """
 
-    filename = "models/20230601-062916"
+    filename = "models/20230602-092100"
     model = train_model.load_model(filename + "/model")
     num_steps = 200  # T = 10, dt = 0.05
-    num_trajectories = 100
+    num_trajectories = 1000
     experiment_name = "all"
     save_dir = "data"
     with open(filename + "/config.yaml") as file:

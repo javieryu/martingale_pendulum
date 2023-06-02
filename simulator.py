@@ -93,7 +93,7 @@ def pendulum_continuous(x, m, l, b, g):
     """
     Describes the continuous-time dynamics of an unforced, damped pendulum.
     x = [theta, theta_dot]
-    x = [0, 0] is upright; positive theta is clockwise.
+    x = [0, 0] is down; positive theta is counter-clockwise
     """
     theta, theta_dot = x
     theta_ddot = (-m * g * l * np.sin(theta) - b * theta_dot) / (m * l ** 2)
