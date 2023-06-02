@@ -28,7 +28,7 @@ if __name__ == "__main__":
     model = train_model.load_model(filename + "/model")
     num_steps = 200  # T = 10, dt = 0.05
     num_trajectories = 1000
-    experiment_name = "all"
+    experiment_name = "gcon_shift"
     save_dir = "data"
     with open(filename + "/config.yaml") as file:
         train_config = yaml.full_load(file)
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         Gradual concept shift, pendulum length changes linearly from 0.2 to 1.0 during the
         trajectory rollout.
         """
-        init_bounds = ([3 * np.pi / 2, 0.0], [3.99 * np.pi / 2, 0.0])
+        init_bounds = ([3 * np.pi / 2, 0.0], [np.pi, 0.0])
         exp_config = copy(train_config)
         exp_config["l"] = [0.2, 1.0]
         states, xys, params = simulator.generate_trajectories(
@@ -128,4 +128,5 @@ if __name__ == "__main__":
         """
         Abrupt concept shift, double pendulum dynamics after training on single.
         """
+
         pass
