@@ -47,7 +47,7 @@ def simulate_pendulum(x_init, config):
         xy_traj[step, :] = get_xy(state_traj[step, 0], l(r))
         param_traj[step, :] = np.array([m(r), l(r), b(r), g(r)])
 
-    state_traj[:, 0] = np.mod(state_traj[:, 0], 2 * np.pi)
+    # state_traj[:, 0] = np.mod(state_traj[:, 0], 2 * np.pi)
     return [state_traj, xy_traj, param_traj]
 
 
@@ -87,7 +87,7 @@ def simulate_double_pendulum(x_init, config):
         )
         param_traj[step, :] = np.array([m1(r), m2(r), l1(r), l2(r), b1(r), b2(r), g(r)])
 
-    state_traj[:, 0:2] = np.mod(state_traj[:, 0:2], 2 * np.pi)
+    # state_traj[:, 0:2] = np.mod(state_traj[:, 0:2], 2 * np.pi)
     return [state_traj, xy_traj, param_traj]
 
 
@@ -449,12 +449,12 @@ def make_pendulum_figure(theta):
 if __name__ == "__main__":
     ## Script Single ###
     # specify model params and init condition
-    x_init_1 = np.array([0.9 * np.pi, 0])  # slightly right of upright
-    x_init_2 = np.array([np.pi / 2, 0])  # 90 deg right
+    x_init_1 = np.array([np.pi - 0.01, 0])  # slightly right of upright
+    x_init_2 = np.array([np.pi - 0.01, 0])  # 90 deg right
     config1 = {
         "m": [0.5, 0.5],
         "l": [1.0, 1.0],
-        "b": [0.3, 0.3],
+        "b": [0.05, 0.05],
         "g": [9.81, 9.81],
         "dt": 0.05,
         "T": 10.0,

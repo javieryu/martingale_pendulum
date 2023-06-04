@@ -32,7 +32,7 @@ def training_dist_plot(model_path):
     train_init_bounds = config["train_init_bounds"]
     num_train_trajs = 100
 
-    train_trajs, _ = simulator.generate_trajectories(train_init_bounds, config, num_train_trajs)
+    train_trajs, _, _ = simulator.generate_trajectories(train_init_bounds, config, num_train_trajs)
 
     fig = plt.figure()
     ax = fig.add_subplot(aspect="equal")
@@ -57,8 +57,8 @@ def quiver_plots(forward_dynamics):
     # thetas = np.linspace(-2*np.pi, 2*np.pi, num=50)
     # theta_dots = np.linspace(-2*np.pi, 2*np.pi, num=50)
     
-    thetas = np.linspace(-np.pi, np.pi, num=15)
-    theta_dots = np.linspace(-np.pi, np.pi, num=15)
+    thetas = np.linspace(np.pi / 2, np.pi, num=15)
+    theta_dots = np.linspace(-np.pi / 2, np.pi / 2, num=15)
     Theta, Theta_dot = np.meshgrid(thetas, theta_dots)
     theta_dir = np.zeros(Theta.shape)
     theta_dot_dir = np.zeros(Theta.shape)
@@ -77,7 +77,7 @@ def quiver_plots(forward_dynamics):
     plt.xlabel(r'$\theta$ (rad)', fontsize=15)
     plt.ylabel(r'$\dot{\theta}$ (rad/s)', fontsize=15)
 
-    # plt.savefig("figures/quiver_learned_OOD.svg")
+    plt.savefig("figures/quiver_learned_ID.svg")
     # plt.savefig("figures/quiver_learned_OOD.png")
 
     plt.show()
@@ -86,10 +86,10 @@ def quiver_plots(forward_dynamics):
 
 
 if __name__ == "__main__":
-    filename = "models/20230518-115451"
+    filename = "models/20230602-092100"
     model = load_model(filename + "/model")
-    test_config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
-    init_state = [-np.pi/6, 0]
+    # test_config = {"m": 0.5, "l": 1.0, "b": 0.3, "g": 9.81, "dt": 0.05, "T": 10.0}
+    init_state = [np.pi * 0.9, 0]
     
     # # Make animation testing NN on new environment
     # compute rollouts
@@ -109,5 +109,5 @@ if __name__ == "__main__":
     true_dynamics = lambda state : simulator.pendulum_dynamics(state, 0.05, m=0.5, l=1, b=0.3, g=9.81)
     learned_dynamics = lambda state: train_model.single_input_pred(model, state)
     
-    quiver_plots(true_dynamics)
+    # quiver_plots(true_dynamics)
     quiver_plots(learned_dynamics)

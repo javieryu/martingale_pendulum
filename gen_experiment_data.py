@@ -24,7 +24,7 @@ if __name__ == "__main__":
         4. define experiment name
     """
 
-    filename = "models/20230602-092100"
+    filename = "models/20230603-091943"
     model = train_model.load_model(filename + "/model")
     num_steps = 200  # T = 10, dt = 0.05
     num_trajectories = 1000
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         Initialize the pendulum on a flipped domain. [1.5 pi, 3.99 pi] which
         is the opposite of where it was trained [0.0, 0.5 pi].
         """
-        init_bounds = ([3 * np.pi / 2, 0.0], [3.99 * np.pi / 2, 0.0])
+        init_bounds = ([-np.pi / 2, 0.0], [-np.pi, 0.0])
         exp_config = copy(train_config)
         states, xys, params = simulator.generate_trajectories(
             init_bounds, exp_config, num_trajectories
@@ -104,9 +104,10 @@ if __name__ == "__main__":
         Gradual concept shift, pendulum length changes linearly from 0.2 to 1.0 during the
         trajectory rollout.
         """
-        init_bounds = ([3 * np.pi / 2, 0.0], [np.pi, 0.0])
+        init_bounds = ([np.pi / 2, 0.0], [np.pi, 0.0])
         exp_config = copy(train_config)
-        exp_config["l"] = [0.2, 1.0]
+        exp_config["l"] = [1.0, 0.2]
+        exp_config["m"] = [0.5, 1.0]
         states, xys, params = simulator.generate_trajectories(
             init_bounds, exp_config, num_trajectories
         )
