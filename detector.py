@@ -252,14 +252,14 @@ if __name__ == "__main__":
         )
         num_detections["gcon_shift"] = num_detections["gcon_shift"] + 1 if np.any(alert_gcon_shift) else num_detections["gcon_shift"]
 
-        no_shift_ind = find_first_alert(alert_no_shift)
-        cov_shift_ind = find_first_alert(alert_cov_shift)
-        gcon_shift_ind = find_first_alert(alert_gcon_shift)
-
-        # plt.plot(ts[:no_shift_ind], lb_no_shift[:no_shift_ind], color="blue")
-        # plt.plot(ts[:cov_shift_ind], lb_cov_shift[:cov_shift_ind], color="green")
-        # plt.plot(ts[:gcon_shift_ind], lb_gcon_shift[:gcon_shift_ind], color="red")
-
+        # no_shift_ind = find_first_alert(alert_no_shift)
+        # cov_shift_ind = find_first_alert(alert_cov_shift)
+        # gcon_shift_ind = find_first_alert(alert_gcon_shift)
+        #
+        # # plt.plot(ts[:no_shift_ind], lb_no_shift[:no_shift_ind], color="blue")
+        # # plt.plot(ts[:cov_shift_ind], lb_cov_shift[:cov_shift_ind], color="green")
+        # # plt.plot(ts[:gcon_shift_ind], lb_gcon_shift[:gcon_shift_ind], color="red")
+        #
         plt.figure(0)
         plt.plot(ts, lb_no_shift, color="blue", alpha=0.3)
 

@@ -25,7 +25,10 @@ def source_risk_ub(pred_seqs, true_seqs, delta):
     true_seq: array of true labels corresponding to each network prediction
     delta: upper bound holds with probability 1-delta
     """
-    risks = [np.linalg.norm(pred_seqs[i] - true_seqs[i], ord=np.inf) for i in range(len(pred_seqs))]  # risk = max(sum(abs(pred_seq - true_seq), axis=1))
+    risks = [
+        np.linalg.norm(pred_seqs[i] - true_seqs[i], ord=np.inf)
+        for i in range(len(pred_seqs))
+    ]  # risk = max(sum(abs(pred_seq - true_seq), axis=1))
 
     _, ubs = bounds_pm_eb(risks, delta)
 
@@ -44,7 +47,10 @@ def sequential_test(pred_seqs, true_seqs, delta, tol, ub_source, method="PM-H"):
     Risk is expected value of absolute error
     """
 
-    risks = [np.linalg.norm(pred_seqs[i] - true_seqs[i], ord=np.inf) for i in range(len(pred_seqs))]  # risk = max(sum(abs(pred_seq - true_seq), axis=1))
+    risks = [
+        np.linalg.norm(pred_seqs[i] - true_seqs[i], ord=np.inf)
+        for i in range(len(pred_seqs))
+    ]  # risk = max(sum(abs(pred_seq - true_seq), axis=1))
 
     if method == "PM-H":
         lbs_target, _ = bounds_pm_h(risks, delta)
@@ -160,11 +166,10 @@ def find_first_alert(seq):
 
 
 if __name__ == "__main__":
-
-
     # define hyperparameters
     delta = 0.1
     tol = 1e-4
+    lb_method = "PM-EB"
 
     # load the in-distribution test data
     # data format: list of lists. Outer list is each traj. Inner lists are gt_states, pred_states, gt_xy, pred_xy, params
@@ -184,7 +189,6 @@ if __name__ == "__main__":
     data_acon_shift = pickle.load(file)
     file.close()
 
-
     num_trajs = len(data_no_shift)
     T = len(data_no_shift[0][0])
     ts = np.arange(1, T + 1, 1)
@@ -199,63 +203,94 @@ if __name__ == "__main__":
 
     # set up plots
     # no shift
-    plt.figure(0, figsize=(5, 5), dpi=500)
+    plt.figure(0)
     plt.axhline(y=ub_source, color="black", linestyle="-")
     plt.xlabel(r"Sample Size, $n$")
     plt.ylabel(r"Risk, $\mathbb{E}[\Vert \hat{x}_{t+1} - x_{t+1} \Vert_1]$")
 
     # covariate shift
-    plt.figure(1, figsize=(5, 5), dpi=500)
+    plt.figure(1)
     plt.axhline(y=ub_source, color="black", linestyle="-")
     plt.xlabel(r"Sample Size, $n$")
     plt.ylabel(r"Risk, $\mathbb{E}[\Vert \hat{x}_{t+1} - x_{t+1} \Vert_1]$")
 
     # gradual concept shift
-    plt.figure(2, figsize=(5, 5), dpi=500)
+    plt.figure(2)
     plt.axhline(y=ub_source, color="black", linestyle="-")
     plt.xlabel(r"Sample Size, $n$")
     plt.ylabel(r"Risk, $\mathbb{E}[\Vert \hat{x}_{t+1} - x_{t+1} \Vert_1]$")
-
 
     # abrupt concept shift
-    plt.figure(3, figsize=(5, 5), dpi=500)
+    plt.figure(3)
     plt.axhline(y=ub_source, color="black", linestyle="-")
     plt.xlabel(r"Sample Size, $n$")
     plt.ylabel(r"Risk, $\mathbb{E}[\Vert \hat{x}_{t+1} - x_{t+1} \Vert_1]$")
 
-    
     # set up and run experiment
     num_detections = {"no_shift": 0, "cov_shift": 0, "gcon_shift": 0, "acon_shift": 0}
     num_tests = 35
     sample_size = np.floor(1000 / num_tests)
-    ns = np.arange(1,sample_size+1, 1)
+    ns = np.arange(1, sample_size + 1, 1)
     for k in range(num_tests):
         print("On test ", k, "/", num_tests)
 
         # get predicted and true sequences for this traj
-        pred_seqs_no_shift = [data_no_shift[i][1] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
-        true_seqs_no_shift = [data_no_shift[i][0] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
+        pred_seqs_no_shift = [
+            data_no_shift[i][1]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
+        true_seqs_no_shift = [
+            data_no_shift[i][0]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
 
-        pred_seqs_cov_shift = [data_cov_shift[i][1] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
-        true_seqs_cov_shift = [data_cov_shift[i][0] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
+        pred_seqs_cov_shift = [
+            data_cov_shift[i][1]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
+        true_seqs_cov_shift = [
+            data_cov_shift[i][0]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
 
-        pred_seqs_gcon_shift = [data_gcon_shift[i][1] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
-        true_seqs_gcon_shift = [data_gcon_shift[i][0] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
+        pred_seqs_gcon_shift = [
+            data_gcon_shift[i][1]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
+        true_seqs_gcon_shift = [
+            data_gcon_shift[i][0]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
 
-        idxs = [0,2]
+        idxs = [0, 2]
         # print(data_acon_shift[0][1].shape)
         # print(data_acon_shift[0][0].shape)
         # print(data_acon_shift[0][0][:,idxs])
         # assert False
-        pred_seqs_acon_shift = [data_acon_shift[i][1] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
-        true_seqs_acon_shift = [data_acon_shift[i][0][:,idxs] for i in range(int(sample_size*k), int(sample_size*k + sample_size))]
+        pred_seqs_acon_shift = [
+            data_acon_shift[i][1]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
+        true_seqs_acon_shift = [
+            data_acon_shift[i][0][:, idxs]
+            for i in range(int(sample_size * k), int(sample_size * k + sample_size))
+        ]
 
         # compute lower bound on target risk
         # no shift
         lb_no_shift, alert_no_shift, obs_no_shift = sequential_test(
-            pred_seqs_no_shift, true_seqs_no_shift, delta, tol, ub_source, method="PM-EB"
+            pred_seqs_no_shift,
+            true_seqs_no_shift,
+            delta,
+            tol,
+            ub_source,
+            method=lb_method,
         )
-        num_detections["no_shift"] = num_detections["no_shift"] + 1 if np.any(alert_no_shift) else num_detections["no_shift"]
+        num_detections["no_shift"] = (
+            num_detections["no_shift"] + 1
+            if np.any(alert_no_shift)
+            else num_detections["no_shift"]
+        )
 
         # covariate shift
         lb_cov_shift, alert_cov_shift, obs_cov_shift = sequential_test(
@@ -264,9 +299,13 @@ if __name__ == "__main__":
             delta,
             tol,
             ub_source,
-            method="PM-EB",
+            method=lb_method,
         )
-        num_detections["cov_shift"] = num_detections["cov_shift"] + 1 if np.any(alert_cov_shift) else num_detections["cov_shift"]
+        num_detections["cov_shift"] = (
+            num_detections["cov_shift"] + 1
+            if np.any(alert_cov_shift)
+            else num_detections["cov_shift"]
+        )
 
         # gradual concept shift
         lb_gcon_shift, alert_gcon_shift, obs_gcon_shift = sequential_test(
@@ -275,9 +314,13 @@ if __name__ == "__main__":
             delta,
             tol,
             ub_source,
-            method="PM-EB",
+            method=lb_method,
         )
-        num_detections["gcon_shift"] = num_detections["gcon_shift"] + 1 if np.any(alert_gcon_shift) else num_detections["gcon_shift"]
+        num_detections["gcon_shift"] = (
+            num_detections["gcon_shift"] + 1
+            if np.any(alert_gcon_shift)
+            else num_detections["gcon_shift"]
+        )
 
         # abrupt concept shift
         lb_acon_shift, alert_acon_shift, obs_acon_shift = sequential_test(
@@ -286,48 +329,86 @@ if __name__ == "__main__":
             delta,
             tol,
             ub_source,
-            method="PM-EB",
+            method=lb_method,
         )
-        num_detections["acon_shift"] = num_detections["acon_shift"] + 1 if np.any(alert_acon_shift) else num_detections["acon_shift"]
+        num_detections["acon_shift"] = (
+            num_detections["acon_shift"] + 1
+            if np.any(alert_acon_shift)
+            else num_detections["acon_shift"]
+        )
 
-# 
+        #
         plt.figure(0)
         plt.plot(ns, lb_no_shift, color="blue", alpha=0.3)
-        plt.plot(ns, obs_no_shift, color="blue", alpha=0.3, linestyle="--", linewidth=0.3)
+        plt.plot(
+            ns, obs_no_shift, color="blue", alpha=0.3, linestyle="--", linewidth=0.3
+        )
 
         plt.figure(1)
         plt.plot(ns, lb_cov_shift, color="green", alpha=0.3)
-        plt.plot(ns, obs_cov_shift, color="green", alpha=0.3, linestyle="--", linewidth=0.3)
+        plt.plot(
+            ns, obs_cov_shift, color="green", alpha=0.3, linestyle="--", linewidth=0.3
+        )
 
         plt.figure(2)
         plt.plot(ns, lb_gcon_shift, color="orange", alpha=0.3)
-        plt.plot(ns, obs_gcon_shift, color="orange", alpha=0.3, linestyle="--", linewidth=0.3)
+        plt.plot(
+            ns, obs_gcon_shift, color="orange", alpha=0.3, linestyle="--", linewidth=0.3
+        )
 
         plt.figure(3)
         plt.plot(ns, lb_acon_shift, color="red", alpha=0.3)
-        plt.plot(ns, obs_acon_shift, color="red", alpha=0.3, linestyle="--", linewidth=0.3)
+        plt.plot(
+            ns, obs_acon_shift, color="red", alpha=0.3, linestyle="--", linewidth=0.3
+        )
 
-
-    
     # report statistics
     print("\nSample Size: ", sample_size)
-    print("Expected number of false alerts: ", delta*num_tests)
+    print("Expected number of false alerts: ", delta * num_tests)
     print("# detections/#tests")
-    print("no shift: ", num_detections["no_shift"], "/", num_tests, " = ", num_detections["no_shift"]/num_tests)
-    print("cov shift: ", num_detections["cov_shift"], "/", num_tests, " = ", num_detections["cov_shift"]/num_tests)
-    print("gcon shift: ", num_detections["gcon_shift"], "/", num_tests, " = ", num_detections["gcon_shift"]/num_tests)
-    print("acon shift: ", num_detections["acon_shift"], "/", num_tests, " = ", num_detections["acon_shift"]/num_tests)
-    
+    print(
+        "no shift: ",
+        num_detections["no_shift"],
+        "/",
+        num_tests,
+        " = ",
+        num_detections["no_shift"] / num_tests,
+    )
+    print(
+        "cov shift: ",
+        num_detections["cov_shift"],
+        "/",
+        num_tests,
+        " = ",
+        num_detections["cov_shift"] / num_tests,
+    )
+    print(
+        "gcon shift: ",
+        num_detections["gcon_shift"],
+        "/",
+        num_tests,
+        " = ",
+        num_detections["gcon_shift"] / num_tests,
+    )
+    print(
+        "acon shift: ",
+        num_detections["acon_shift"],
+        "/",
+        num_tests,
+        " = ",
+        num_detections["acon_shift"] / num_tests,
+    )
+
     # show and save plots
-    plt.figure(0)    
-    plt.savefig(os.path.join("figures", "no_shift_many.png"))
-    
+    plt.figure(0)
+    plt.savefig(os.path.join("figures", "no_shift_many" + lb_method + ".png"))
+
     plt.figure(1)
-    plt.savefig(os.path.join("figures", "cov_shift_many.png"))
+    plt.savefig(os.path.join("figures", "cov_shift_many" + lb_method + ".png"))
 
     plt.figure(2)
-    plt.savefig(os.path.join("figures", "gcon_shift_many.png"))
+    plt.savefig(os.path.join("figures", "gcon_shift_many" + lb_method + ".png"))
 
     plt.figure(3)
-    plt.savefig(os.path.join("figures", "acon_shift_many.png"))
+    plt.savefig(os.path.join("figures", "acon_shift_many" + lb_method + ".png"))
     plt.show()
