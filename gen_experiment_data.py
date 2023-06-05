@@ -80,7 +80,7 @@ if __name__ == "__main__":
         Initialize the pendulum on a flipped domain. [1.5 pi, 3.99 pi] which
         is the opposite of where it was trained [0.0, 0.5 pi].
         """
-        init_bounds = ([-np.pi / 2, 0.0], [-np.pi, 0.0])
+        init_bounds = ([-np.pi / 2, 0.5], [-np.pi, 1.0])
         exp_config = copy(train_config)
         states, xys, params = simulator.generate_trajectories(
             init_bounds, exp_config, num_trajectories
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         init_bounds = ([np.pi / 2, 0.0], [np.pi, 0.0])
         exp_config = copy(train_config)
         exp_config["l"] = [1.0, 0.2]
-        exp_config["m"] = [0.5, 1.0]
+        exp_config["b"] = [0.3, 0.01]
         states, xys, params = simulator.generate_trajectories(
             init_bounds, exp_config, num_trajectories
         )

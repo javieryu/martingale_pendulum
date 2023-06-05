@@ -257,6 +257,30 @@ def cossin_to_rad(trajectory):
     )
 
 
+def double_rad_to_cossin(trajectory):
+    return torch.cat(
+        (
+            torch.cos(trajectory[:, 0]).unsqueeze(1),
+            torch.sin(trajectory[:, 0]).unsqueeze(1),
+            torch.cos(trajectory[:, 1]).unsqueeze(1),
+            torch.sin(trajectory[:, 1]).unsqueeze(1),
+            trajectory[:, 2:],
+        ),
+        dim=1,
+    )
+
+
+def double_cossin_to_rad(trajectory):
+    return torch.cat(
+        (
+            torch.atan2(trajectory[:, 1], trajectory[:, 0]).unsqueeze(1),
+            torch.atan2(trajectory[:, 3], trajectory[:, 2]).unsqueeze(1),
+            trajectory[:, 4:],
+        ),
+        dim=1,
+    )
+
+
 def get_xy(theta, l):
     """Return the (x, y) coordinates of the bob at angle theta"""
     return l * np.sin(theta), -l * np.cos(theta)

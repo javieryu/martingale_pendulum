@@ -1,5 +1,5 @@
 import numpy as np
-import confseq
+from confseq import conjmix_bounded as conjmix
 import pickle
 import matplotlib.pyplot as plt
 import os
@@ -140,7 +140,7 @@ def bounds_cm_eb(Zs, delta):
     Conjugate-Mixture Empirical-Bernstein confidence sequence
     """
     v_opt = len(Zs) / 2  # make bound tightest halfway through traj
-    lbs = confseq.conjmix_empbern_lower_cs(
+    lbs = conjmix.conjmix_empbern_lower_cs(
         Zs, v_opt, alpha=delta, running_intersection=False
     )
     return lbs
@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
         # compute lower bound on target risk
         lb_no_shift, alert_no_shift = sequential_test(
-            pred_seq_no_shift, true_seq_no_shift, delta, tol, ub_source, method="PM-EB"
+            pred_seq_no_shift, true_seq_no_shift, delta, tol, ub_source, method="CM-EB"
         )
         lb_cov_shift, alert_cov_shift = sequential_test(
             pred_seq_cov_shift,
@@ -221,7 +221,7 @@ if __name__ == "__main__":
             delta,
             tol,
             ub_source,
-            method="PM-EB",
+            method="CM-EB",
         )
         lb_gcon_shift, alert_gcon_shift = sequential_test(
             pred_seq_gcon_shift,
@@ -229,7 +229,7 @@ if __name__ == "__main__":
             delta,
             tol,
             ub_source,
-            method="PM-EB",
+            method="CM-EB",
         )
 
         no_shift_ind = find_first_alert(alert_no_shift)
